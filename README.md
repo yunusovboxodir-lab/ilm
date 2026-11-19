@@ -20,8 +20,16 @@ ilm is a plugin for Claude Code: a skill with the assistant's rules and a small 
 
 Requirements: Claude Code and Python 3.9 or newer available as `python`.
 
+Inside Claude Code (2.1.275 or later):
+
+```
+/plugin install ilm --marketplace yunusovboxodir-lab/ilm
+```
+
+Or from a local copy:
+
 ```bash
-git clone <this repository> ilm
+git clone https://github.com/yunusovboxodir-lab/ilm.git
 ```
 
 ```bash
