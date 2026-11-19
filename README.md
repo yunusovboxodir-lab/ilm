@@ -104,7 +104,7 @@ Web chat apps that cannot start local programs (for example ChatGPT in the brows
 
 Tell the assistant: `Load this book: /path/to/book.epub` (or paste a YouTube link).
 
-The assistant then reads the whole book once to build its vocabulary. This is the one costly step: a 400-page book is roughly 300 thousand tokens and some fifteen minutes. It tells you the size first, and you can say "later" to start with the opening chapters only.
+The assistant then reads the whole book once to build its vocabulary. This is the one costly step: for a 400-page book in Russian it took about 600 thousand tokens and some fifteen minutes in the author's test (the text itself is about half of that; the rest is the back-and-forth of reading it in portions). It tells you the size first, and you can say "later" to start with the opening chapters only.
 
 After that, just keep working. Ask "where am I in the book?" or "tell me more about <term>" at any time.
 
@@ -117,7 +117,7 @@ Everything is stored in one file on your computer: `~/.ilm/ilm.db` (set `ILM_DAT
 - Audio books are not supported yet.
 - YouTube videos need existing captions; no audio is downloaded or transcribed, and YouTube rejects some requests.
 - Scanned PDFs without a text layer cannot be read.
-- The vocabulary is sent to the assistant at the start of each conversation: a few thousand tokens for a whole book.
+- The vocabulary is sent to the assistant at the start of each conversation: about 7-8 thousand tokens for a book of 75 terms.
 - Search is keyword-based, without embeddings.
 - Tested with Claude Code on Windows. Other clients are supported through the standard MCP protocol but have not been tested by the author yet.
 
