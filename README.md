@@ -20,6 +20,14 @@ It also works for a book you have not read yet: you pick up its vocabulary on yo
 
 ilm is a small local MCP server plus a set of rules for the assistant. It works with any assistant that speaks MCP: Claude Code, Codex, Cursor, Claude Desktop and others, in a coding agent or in a chat. All of them share one book and one record of your progress.
 
+## Lenses: the no-install way
+
+For ten widely read books there are ready-made lenses in [`lenses/`](lenses/README.md): one text file each, about 20 concepts with a plain gloss and a project example, eight speaking rules, a project map and five check questions. Paste a lens into your assistant's standing instructions (a Claude or ChatGPT project, `CLAUDE.md`, `AGENTS.md`) and it explains your project in that book's terms. No server, no book file, no mapping cost. The lenses are in Russian.
+
+Systems thinking (Senge), theory of constraints (Goldratt), lean startup (Ries), fast and slow thinking (Kahneman), atomic habits (Clear), seven habits (Covey), good to great (Collins), antifragility (Taleb), deep work (Newport), winning people over (Carnegie).
+
+Use the server described below when your book is not on that list or is your company's own material.
+
 ## What it does
 
 - Reads one book at a time: PDF, EPUB, FB2, DOCX, TXT, MD, HTML, or a YouTube video with captions.
