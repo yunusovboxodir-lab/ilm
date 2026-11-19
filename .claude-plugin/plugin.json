@@ -1,0 +1,14 @@
+{
+  "name": "ilm",
+  "displayName": "ilm",
+  "version": "0.1.0",
+  "description": "A personal assistant that teaches you one book through your own everyday matters: load a book, talk about your life and work, and meet its ideas where they actually fit.",
+  "author": { "name": "Yuten" },
+  "keywords": ["books", "learning", "assistant", "reading", "self-development"],
+  "mcpServers": {
+    "ilm": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/ilm_server.py"]
+    }
+  }
+}

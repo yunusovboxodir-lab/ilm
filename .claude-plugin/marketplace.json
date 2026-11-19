@@ -1,0 +1,12 @@
+{
+  "name": "ilm",
+  "description": "ilm: learn one book through your own everyday matters.",
+  "owner": { "name": "Yuten" },
+  "plugins": [
+    {
+      "name": "ilm",
+      "source": "./",
+      "description": "A personal assistant that teaches you one book through your own everyday matters."
+    }
+  ]
+}
