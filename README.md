@@ -61,3 +61,7 @@ Everything is stored in one file on your computer: `~/.ilm/ilm.db` (set `ILM_DAT
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
