@@ -1,11 +1,11 @@
 {
   "name": "ilm",
   "displayName": "ilm",
-  "version": "0.1.0",
-  "description": "A personal assistant that teaches you one book through your own everyday matters: load a book, talk about your life and work, and meet its ideas where they actually fit.",
+  "version": "0.2.0",
+  "description": "Learn a book while you build: load a book, keep working on your project, and meet its ideas at the moments where a real decision is being made.",
   "author": { "name": "Yuten" },
   "license": "MIT",
-  "keywords": ["books", "learning", "assistant", "reading", "self-development"],
+  "keywords": ["books", "learning", "vibe-coding", "mcp", "reading"],
   "mcpServers": {
     "ilm": {
       "command": "python",

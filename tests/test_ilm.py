@@ -414,13 +414,14 @@ class ProtocolTests(unittest.TestCase):
                 {"jsonrpc": "2.0", "id": 7, "method": "initialize", "params": [1, 2]},
                 {"jsonrpc": "2.0", "id": 8, "method": "tools/call",
                  "params": {"name": "ilm_search", "arguments": {"query": "x", "limit": None}}},
+                {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "ilm_guide", "arguments": {}}},
             ]
             data = "".join(json.dumps(m, ensure_ascii=False) + "\n" for m in msgs).encode("utf-8")
             p = subprocess.run([sys.executable, str(ROOT / "server" / "ilm_server.py")],
                                input=data, capture_output=True, env=env, timeout=60)
             lines = [json.loads(x) for x in p.stdout.decode("utf-8").splitlines() if x.strip()]
             by_id = {m["id"]: m for m in lines}
-            self.assertEqual(set(by_id), {1, 2, 3, 4, 5, 6, 7, 8})
+            self.assertEqual(set(by_id), {1, 2, 3, 4, 5, 6, 7, 8, 9})
             self.assertIn("result", by_id[7])
             self.assertNotIn("internal error", by_id[8]["result"]["content"][0]["text"])
             self.assertEqual(by_id[1]["result"]["protocolVersion"], "2025-06-18")
@@ -434,6 +435,16 @@ class ProtocolTests(unittest.TestCase):
             )
             for t in by_id[2]["result"]["tools"]:
                 self.assertEqual(t["inputSchema"]["type"], "object")
+            # Rules must reach clients that have no skills (Codex, Cursor, chat apps): through the server itself.
+            self.assertIn("ilm_guide", names)
+            self.assertLessEqual(len(by_id[1]["result"]["instructions"]), 2000)
+            self.assertIn("ilm_guide", by_id[1]["result"]["instructions"])
+            self.assertIn("ilm_guide", json.loads(by_id[4]["result"]["content"][0]["text"])["rules"])
+            guide = by_id[9]["result"]["content"][0]["text"]
+            self.assertFalse(by_id[9]["result"]["isError"])
+            self.assertFalse(guide.lstrip().startswith("---"))
+            self.assertIn("decision", guide.lower())
+            self.assertGreater(len(guide), 3000)
             self.assertIn("Любит рыбалку", by_id[4]["result"]["content"][0]["text"])
             self.assertTrue(by_id[5]["result"]["isError"])
             self.assertEqual(by_id[6]["error"]["code"], -32601)

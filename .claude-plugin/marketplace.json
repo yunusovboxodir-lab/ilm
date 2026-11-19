@@ -1,12 +1,12 @@
 {
   "name": "ilm",
-  "description": "ilm: learn one book through your own everyday matters.",
+  "description": "ilm: learn a book while you build.",
   "owner": { "name": "Yuten" },
   "plugins": [
     {
       "name": "ilm",
       "source": "./",
-      "description": "A personal assistant that teaches you one book through your own everyday matters."
+      "description": "Learn a book while you build: one idea from your book at each real decision in your project."
     }
   ]
 }
