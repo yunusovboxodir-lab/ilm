@@ -415,6 +415,19 @@ class VocabularyTests(Base):
         self.assertFalse(first["known"])
         self.assertEqual(voc[1]["means"], "Рост упирается в ограничивающий фактор.")   # no gloss: falls back
 
+    def test_dropping_ideas_and_filling_a_missing_gloss(self):
+        self.store.used([self.ids[1]], situation="рост остановился")
+        self.assertEqual(self.store.drop_concepts([self.ids[0], 99999]), {"dropped": 1})
+        voc = self.store.status()["vocabulary"]
+        self.assertEqual([v["term"] for v in voc], ["Пределы роста"])
+        again = self.store.save_concepts([{"name": "пределы роста", "summary": "другое", "gloss": "давить сильнее бесполезно"}])
+        self.assertEqual(again["concept_ids"], [self.ids[1]])
+        v = self.store.status()["vocabulary"][0]
+        self.assertEqual(v["means"], "давить сильнее бесполезно")
+        self.assertTrue(v["known"])                       # history survives the fill-in
+        self.store.save_concepts([{"name": "Пределы роста", "summary": "с", "gloss": "не затирает"}])
+        self.assertEqual(self.store.status()["vocabulary"][0]["means"], "давить сильнее бесполезно")
+
     def test_long_meaning_is_cut_at_a_word_border(self):
         self.store.save_concepts([{"name": "Длинная", "summary": "слово " * 80}])
         means = self.store.status()["vocabulary"][-1]["means"]

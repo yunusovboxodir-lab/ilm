@@ -107,12 +107,14 @@ The idea map is the book's vocabulary: its concepts, each with a gloss, when it 
 **The loop.** Call `ilm_read_chunks` with `count` 24, then `ilm_save_concepts` with the concepts found and `mapped_upto` set to the returned `next_start` (or `total_chunks` when `next_start` is null). Repeat until `mapping_complete` is true. If you stop early for any reason, tell the user how far it got; the next call continues from there.
 
 **What to save.**
-- What the author actually claims and a reader could use: a named concept, a principle, a model, a distinction, a law. Aim for the book's working vocabulary: for a whole book, some 40 to 80 terms. Two to five per portion is normal; do not save every remark.
+- Terms, not remarks. A term is a name the author gives to something and comes back to: a concept, a principle, a model, a distinction, a law, an archetype. A sentence of advice, an observation, a chapter's conclusion is not a term, however true.
+- At most three per portion of 24 fragments, often one or none. A whole book yields a working vocabulary of 40 to 80 terms; more than that cannot be carried through a conversation and will not be used.
+- The test for each candidate: could you say it in one breath to name a situation at work ("this is a ...")? If it needs a sentence, it is not a term.
 - Front matter carries no ideas: title pages, tables of contents, forewords, acknowledgements, the story of how the book was written. Save an empty list for such a portion.
 - An idea already in the map is not saved again; the tool ignores a repeated name.
 
 **The fields.**
-- `name`: the author's own term, short, in the book's language.
+- `name`: the author's own term, in the book's language, five words at most. No colons, no explanations in the name.
 - `gloss`: the term in 3-10 plain words, the way you would say it in passing: "we treat the symptom, the cause stays". This is what the user hears the first time, so make it sayable.
 - `summary`: one or two sentences in the author's sense.
 - `use_when`: the situations in which the term applies, in words a person would use about their own project, work or life ("recurring bug, quick patch, deadline rush, what to build first"), not in the book's terms.
@@ -120,7 +122,9 @@ The idea map is the book's vocabulary: its concepts, each with a gloss, when it 
 - `location`: copied from the fragment.
 - `author_example`: the author's story or case for this idea, if there is one.
 
-When mapping is done, tell the user in two or three lines how many terms the vocabulary holds and name three of them, then go back to their work.
+**Review at the end.** When the whole book is read, call `ilm_progress` and look at the list as a whole. Remove with `ilm_drop_concepts` what does not belong: the same idea saved twice under different names, entries that are remarks and not terms, anything beyond the 80 most usable. If several agents mapped the book in parts, this step is essential: they could not see each other's work.
+
+Then tell the user in two or three lines how many terms the vocabulary holds and name three of them, and go back to their work.
 
 ## Progress, privacy, deletion
 

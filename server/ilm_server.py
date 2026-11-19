@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ilm_core  # noqa: E402
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
 
 INSTRUCTIONS = """ilm turns a book the user knows into the language you work in together. The user loaded a book; ilm keeps its vocabulary: the book's terms, what each means, when it applies.
@@ -52,7 +52,8 @@ TOOLS = [
          {"start": {"type": "integer", "description": "Fragment number to start from; default: first unmapped."},
           "count": {"type": "integer", "description": "How many fragments (default 12, max 50)."}}),
     tool("ilm_save_concepts",
-         "Save ideas found in the fragments just read and move the mapping pointer. Save only what the author "
+         "Save ideas found in the fragments just read and move the mapping pointer. An idea whose name is already "
+         "in the map is not duplicated; its empty gloss or use_when is filled in. Save only what the author "
          "actually says. A portion with no new ideas is saved with an empty list.",
          {"concepts": {"type": "array", "items": {"type": "object", "properties": {
              "name": {"type": "string", "description": "Short name of the idea, in the book's language."},
@@ -84,6 +85,10 @@ TOOLS = [
          {"concept_id": {"type": "integer"}, "status": {"type": "string", "enum": ["met", "applied"]},
           "situation": {"type": "string", "description": "A few words on the user's situation it was used in."}},
          ["concept_id", "status"]),
+    tool("ilm_drop_concepts",
+         "Remove ideas from the idea map by id: duplicates, remarks that are not real terms, wrong entries. Use it "
+         "after mapping a whole book to bring the vocabulary down to its working size.",
+         {"concept_ids": {"type": "array", "items": {"type": "integer"}}}, ["concept_ids"]),
     tool("ilm_used",
          "Call once, right before writing an answer in which you use terms from the vocabulary: records them as met.",
          {"concept_ids": {"type": "array", "items": {"type": "integer"}, "description": "Ids from the vocabulary."},
@@ -137,6 +142,8 @@ def call_tool(store, name, a):
         return store.save_concepts(a.get("concepts"), a.get("mapped_upto", 0))
     if name == "ilm_search":
         return store.search(a.get("query"), a.get("limit", 3))
+    if name == "ilm_drop_concepts":
+        return store.drop_concepts(a.get("concept_ids"))
     if name == "ilm_used":
         return store.used(a.get("concept_ids"), a.get("situation", ""))
     if name == "ilm_mark":

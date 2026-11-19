@@ -1,7 +1,7 @@
 {
   "name": "ilm",
   "displayName": "ilm",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A book you know becomes the language you work in: load a book and your assistant speaks in its terms, right inside your everyday work.",
   "author": { "name": "Yuten" },
   "license": "MIT",

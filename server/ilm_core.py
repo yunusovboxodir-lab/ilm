@@ -610,8 +610,14 @@ class Store:
                 name, summary = (c.get("name") or "").strip(), (c.get("summary") or "").strip()
                 if not name or not summary:
                     raise IlmError("Every concept needs a 'name' and a 'summary'.")
-                if name.casefold() in known:
-                    ids.append(known[name.casefold()])
+                if name.casefold() in known:              # already in the map: only fill what is missing
+                    cid = known[name.casefold()]
+                    for col in ("gloss", "use_when"):
+                        val = (c.get(col) or "").strip()
+                        if val:
+                            self.db.execute(f"UPDATE concepts SET {col}=? WHERE id=? AND coalesce({col},'')=''",
+                                            (val[:300], cid))
+                    ids.append(cid)
                     continue
                 cur = self.db.execute(
                     "INSERT INTO concepts(book_id,name,summary,gloss,use_when,chapter,location,author_example) "
@@ -671,13 +677,24 @@ class Store:
                             (concept_id, status, (situation or "")[:500], time.time()))
         return {"concept": c["name"], "status": new_status}
 
+    def drop_concepts(self, concept_ids):
+        """Remove ideas from the map: duplicates, remarks that are not terms, wrong entries."""
+        ids = list(dict.fromkeys(int(i) for i in (concept_ids or [])))
+        if not ids:
+            return {"dropped": 0}
+        marks = ",".join("?" * len(ids))
+        with self.db:
+            self.db.execute(f"DELETE FROM events WHERE concept_id IN ({marks})", ids)
+            dropped = self.db.execute(f"DELETE FROM concepts WHERE id IN ({marks})", ids).rowcount
+        return {"dropped": dropped}
+
     def _vocabulary(self, book_id):
         """Every mapped term of the book, short enough to be carried through a whole conversation."""
         out = []
         for c in self.db.execute("SELECT id,name,summary,gloss,use_when,status FROM concepts WHERE book_id=? "
                                  "ORDER BY id", (book_id,)):
             means = c["gloss"] or _shorten(c["summary"] or "", 240)
-            out.append({"id": c["id"], "term": c["name"], "means": means, "when": _shorten(c["use_when"] or "", 160),
+            out.append({"id": c["id"], "term": c["name"], "means": means, "when": _shorten(c["use_when"] or "", 100),
                         "known": c["status"] != "new"})
         return out
 
