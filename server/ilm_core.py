@@ -88,6 +88,13 @@ def _split_text(text):
     return out
 
 
+def _shorten(text, limit):
+    """Cut at a word border, never in the middle of a word."""
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
 def _timestamp(seconds):
     s = int(seconds)
     h, m, s = s // 3600, s % 3600 // 60, s % 60
@@ -433,6 +440,14 @@ def _make_chunks(units, mergeable, kind):
     return chunks
 
 
+def _approx_tokens(chunks):
+    """Rough size of the book for a language model: non-Latin scripts cost about twice as many tokens."""
+    text = "".join(t for _, t in chunks[:20])
+    latin = sum(1 for ch in text if ch.isascii()) / max(1, len(text))
+    total = sum(len(t) for _, t in chunks)
+    return int(total / (4 if latin > 0.7 else 2.5))
+
+
 # ---------------------------------------------------------------- storage
 
 SCHEMA = """
@@ -445,7 +460,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
   text, book_id UNINDEXED, seq UNINDEXED, tokenize='unicode61 remove_diacritics 2');
 CREATE TABLE IF NOT EXISTS concepts(
   id INTEGER PRIMARY KEY, book_id INTEGER, name TEXT, summary TEXT, chapter TEXT, location TEXT,
-  author_example TEXT, use_when TEXT DEFAULT '', status TEXT DEFAULT 'new', met_count INTEGER DEFAULT 0);
+  author_example TEXT, use_when TEXT DEFAULT '', status TEXT DEFAULT 'new', met_count INTEGER DEFAULT 0,
+  gloss TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS events(
   id INTEGER PRIMARY KEY, concept_id INTEGER, kind TEXT, situation TEXT, created_at REAL);
 CREATE TABLE IF NOT EXISTS notes(id INTEGER PRIMARY KEY, text TEXT, created_at REAL);
@@ -458,6 +474,10 @@ class Store:
         self.db = sqlite3.connect(os.path.join(data_dir, "ilm.db"))
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        have = {r["name"] for r in self.db.execute("PRAGMA table_info(concepts)")}
+        for col in ("use_when", "gloss"):            # databases made by earlier versions
+            if col not in have:
+                self.db.execute(f"ALTER TABLE concepts ADD COLUMN {col} TEXT DEFAULT ''")
 
     def close(self):
         self.db.close()
@@ -548,8 +568,11 @@ class Store:
         return {
             "loaded": True, "title": title or found, "kind": kind, "chunks": len(chunks),
             "characters": sum(len(t) for _, t in chunks),
-            "next_step": "Build the first part of the idea map now: call ilm_read_chunks, then ilm_save_concepts. "
-                         "Map the first two portions now and later ones gradually; do not read the whole book at once.",
+            "mapping": {"fragments": len(chunks), "portions": -(-len(chunks) // 24),
+                        "approx_tokens": _approx_tokens(chunks)},
+            "next_step": "Build the idea map of the whole book now, as the rules say (ilm_guide, 'Building the "
+                         "idea map'). First tell the user in one line what it takes - see 'mapping' - and that "
+                         "they can say 'later'. Until the map exists there is no vocabulary to speak in.",
         }
 
     def books(self):
@@ -591,9 +614,10 @@ class Store:
                     ids.append(known[name.casefold()])
                     continue
                 cur = self.db.execute(
-                    "INSERT INTO concepts(book_id,name,summary,use_when,chapter,location,author_example) "
-                    "VALUES(?,?,?,?,?,?,?)",
-                    (book["id"], name, summary, (c.get("use_when") or "").strip(), (c.get("chapter") or "").strip(),
+                    "INSERT INTO concepts(book_id,name,summary,gloss,use_when,chapter,location,author_example) "
+                    "VALUES(?,?,?,?,?,?,?,?)",
+                    (book["id"], name, summary, (c.get("gloss") or "").strip()[:120],
+                     (c.get("use_when") or "").strip(), (c.get("chapter") or "").strip(),
                      (c.get("location") or "").strip(), (c.get("author_example") or "").strip()))
                 ids.append(cur.lastrowid)
                 known[name.casefold()] = cur.lastrowid
@@ -602,20 +626,21 @@ class Store:
         return {"concept_ids": ids, "mapped_chunks": upto, "total_chunks": book["total_chunks"],
                 "mapping_complete": upto >= book["total_chunks"]}
 
-    def search(self, query, limit=4):
+    def search(self, query, limit=3):
         book = self._active()
         stems = _stems(query or "")
         if not stems:
             return {"passages": [], "concepts": []}
         match = " OR ".join(f'"{s}"*' for s in stems)
-        limit = max(1, min(int(limit or 4), 10))
+        limit = max(1, min(int(limit or 3), 10))
         rows = self.db.execute(
             "SELECT c.seq, c.location, c.text FROM chunks_fts f JOIN chunks c ON c.book_id=f.book_id AND c.seq=f.seq "
             "WHERE chunks_fts MATCH ? AND f.book_id=? ORDER BY bm25(chunks_fts) LIMIT ?",
             (match, book["id"], limit)).fetchall()
         scored = []
         for c in self.db.execute("SELECT * FROM concepts WHERE book_id=?", (book["id"],)).fetchall():
-            hay = " ".join((c["name"], c["summary"], c["use_when"], c["chapter"], c["author_example"])).lower()
+            hay = " ".join((c[k] or "") for k in ("name", "summary", "gloss", "use_when", "chapter",
+                                                  "author_example")).lower()
             score = sum(1 for s in stems if re.search(r"\b" + re.escape(s), hay))
             if score:
                 scored.append((score, c))
@@ -645,6 +670,34 @@ class Store:
             self.db.execute("INSERT INTO events(concept_id,kind,situation,created_at) VALUES(?,?,?,?)",
                             (concept_id, status, (situation or "")[:500], time.time()))
         return {"concept": c["name"], "status": new_status}
+
+    def _vocabulary(self, book_id):
+        """Every mapped term of the book, short enough to be carried through a whole conversation."""
+        out = []
+        for c in self.db.execute("SELECT id,name,summary,gloss,use_when,status FROM concepts WHERE book_id=? "
+                                 "ORDER BY id", (book_id,)):
+            means = c["gloss"] or _shorten(c["summary"] or "", 240)
+            out.append({"id": c["id"], "term": c["name"], "means": means, "when": _shorten(c["use_when"] or "", 160),
+                        "known": c["status"] != "new"})
+        return out
+
+    def used(self, concept_ids, situation=""):
+        """Record in one call every term the assistant has just used in its answer."""
+        ids = list(dict.fromkeys(int(i) for i in (concept_ids or [])))
+        if not ids:
+            return {"marked": 0}
+        have = {r["id"] for r in self.db.execute(
+            f"SELECT id FROM concepts WHERE id IN ({','.join('?' * len(ids))})", ids)}
+        missing = [i for i in ids if i not in have]
+        if missing:
+            raise IlmError(f"No concept with id {missing[0]}; nothing was recorded. Ids come from the vocabulary.")
+        now = time.time()
+        with self.db:
+            self.db.execute(f"UPDATE concepts SET met_count=met_count+1, status=CASE WHEN status='new' THEN 'met' "
+                            f"ELSE status END WHERE id IN ({','.join('?' * len(ids))})", ids)
+            self.db.executemany("INSERT INTO events(concept_id,kind,situation,created_at) VALUES(?,?,?,?)",
+                                [(i, "met", (situation or "")[:500], now) for i in ids])
+        return {"marked": len(ids)}
 
     def progress(self):
         book = self._active()
@@ -683,7 +736,7 @@ class Store:
                      "total_chunks": book["total_chunks"], "mapped_chunks": book["mapped_upto"],
                      "mapping_complete": book["mapped_upto"] >= book["total_chunks"],
                      "concepts": self._counts(book["id"])},
-            "follow_up": follow, "about_user": notes,
+            "follow_up": follow, "about_user": notes, "vocabulary": self._vocabulary(book["id"]),
         }
 
     def delete_all(self, confirm=False):

@@ -1,12 +1,12 @@
 {
   "name": "ilm",
-  "description": "ilm: learn a book while you build.",
+  "description": "ilm: a book you know becomes the language you work in.",
   "owner": { "name": "Yuten" },
   "plugins": [
     {
       "name": "ilm",
       "source": "./",
-      "description": "Learn a book while you build: one idea from your book at each real decision in your project."
+      "description": "A book you know becomes the language you work in: your assistant speaks in its terms inside your everyday work."
     }
   ]
 }

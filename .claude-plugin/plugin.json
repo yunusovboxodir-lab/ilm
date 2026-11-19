@@ -1,8 +1,8 @@
 {
   "name": "ilm",
   "displayName": "ilm",
-  "version": "0.2.0",
-  "description": "Learn a book while you build: load a book, keep working on your project, and meet its ideas at the moments where a real decision is being made.",
+  "version": "0.3.0",
+  "description": "A book you know becomes the language you work in: load a book and your assistant speaks in its terms, right inside your everyday work.",
   "author": { "name": "Yuten" },
   "license": "MIT",
   "keywords": ["books", "learning", "vibe-coding", "mcp", "reading"],

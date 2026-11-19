@@ -393,6 +393,71 @@ class SwitchBookTests(Base):
         self.assertEqual(st["about_user"], [])
 
 
+class VocabularyTests(Base):
+    """The book as a working language: the whole glossary comes once, with the status."""
+
+    def setUp(self):
+        super().setUp()
+        self.loaded = self.store.load_source(str(make_txt(self.dir)))
+        self.ids = self.store.save_concepts([
+            {"name": "Подмена проблемы", "summary": "Симптоматическое решение мешает настоящему и создаёт зависимость.",
+             "gloss": "лечим симптом, корень остаётся", "use_when": "заплатка, повторяющаяся ошибка"},
+            {"name": "Пределы роста", "summary": "Рост упирается в ограничивающий фактор."},
+        ])["concept_ids"]
+
+    def test_status_carries_the_whole_vocabulary(self):
+        voc = self.store.status()["vocabulary"]
+        self.assertEqual([v["term"] for v in voc], ["Подмена проблемы", "Пределы роста"])
+        first = voc[0]
+        self.assertEqual(first["id"], self.ids[0])
+        self.assertEqual(first["means"], "лечим симптом, корень остаётся")
+        self.assertEqual(first["when"], "заплатка, повторяющаяся ошибка")
+        self.assertFalse(first["known"])
+        self.assertEqual(voc[1]["means"], "Рост упирается в ограничивающий фактор.")   # no gloss: falls back
+
+    def test_long_meaning_is_cut_at_a_word_border(self):
+        self.store.save_concepts([{"name": "Длинная", "summary": "слово " * 80}])
+        means = self.store.status()["vocabulary"][-1]["means"]
+        self.assertLessEqual(len(means), 241)
+        self.assertTrue(means.endswith("слово…"))
+
+    def test_used_marks_several_terms_in_one_call(self):
+        r = self.store.used(self.ids, situation="третья заплатка часовых поясов")
+        self.assertEqual(r["marked"], 2)
+        self.assertEqual(self.store.progress()["counts"], {"applied": 0, "met": 2, "new": 0})
+        self.assertTrue(all(v["known"] for v in self.store.status()["vocabulary"]))
+        self.assertEqual(self.store.search("заплатка")["concepts"][0]["user_situations"],
+                         ["третья заплатка часовых поясов"])
+        with self.assertRaises(ilm_core.IlmError):
+            self.store.used([self.ids[0], 99999])
+
+    def test_load_reports_what_full_mapping_will_cost(self):
+        m = self.loaded["mapping"]
+        self.assertEqual(m["fragments"], self.loaded["chunks"])
+        self.assertGreater(m["approx_tokens"], 0)
+        self.assertGreaterEqual(m["portions"], 1)
+
+    def test_database_from_an_older_version_still_opens(self):
+        import sqlite3
+        d = os.path.join(self.dir, "old")
+        os.makedirs(d)
+        db = sqlite3.connect(os.path.join(d, "ilm.db"))
+        db.execute("CREATE TABLE concepts(id INTEGER PRIMARY KEY, book_id INTEGER, name TEXT, summary TEXT, "
+                   "chapter TEXT, location TEXT, author_example TEXT, status TEXT DEFAULT 'new', "
+                   "met_count INTEGER DEFAULT 0)")
+        db.execute("INSERT INTO concepts(book_id,name,summary) VALUES(1,'Старая идея','суть')")
+        db.commit()
+        db.close()
+        old = ilm_core.Store(d)
+        try:
+            old.load_source(str(make_txt(self.dir)))
+            self.assertEqual(old.status()["vocabulary"][0]["term"], "Старая идея")
+            old.save_concepts([{"name": "Новая", "summary": "с", "gloss": "коротко"}])
+            self.assertEqual(old.search("старая")["concepts"][0]["use_when"], "")
+        finally:
+            old.close()
+
+
 class ProtocolTests(unittest.TestCase):
     def test_stdio_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:
@@ -437,6 +502,7 @@ class ProtocolTests(unittest.TestCase):
                 self.assertEqual(t["inputSchema"]["type"], "object")
             # Rules must reach clients that have no skills (Codex, Cursor, chat apps): through the server itself.
             self.assertIn("ilm_guide", names)
+            self.assertIn("ilm_used", names)
             self.assertLessEqual(len(by_id[1]["result"]["instructions"]), 2000)
             self.assertIn("ilm_guide", by_id[1]["result"]["instructions"])
             self.assertIn("ilm_guide", json.loads(by_id[4]["result"]["content"][0]["text"])["rules"])

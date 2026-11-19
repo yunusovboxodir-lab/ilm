@@ -1,30 +1,32 @@
 # ilm
 
-Learn a book while you build.
+A book you know becomes the language you work in.
 
-You are building something with an AI assistant: a product, a codebase, a business. You also have a book you want to master and never find the time to read. Load it into ilm and keep working. At the moments where a real decision is being made (what to build first, which approach to take, why the same bug keeps coming back) the assistant brings in one idea from your book, with its page, applied to that exact decision. Over weeks you learn the book through your own project instead of reading it cover to cover.
-
-Vibe coding through a book.
+You read a book, it mattered, and a year later most of it is gone. Load it into ilm and keep working with your AI assistant as usual. From then on the assistant speaks the book's language: when one of its concepts names what is happening in your project, it uses that word, right inside the sentence you were going to read anyway. You meet the book's ideas again and again in your own situations, and that is how a book read once turns into a way of thinking.
 
 ```
 You:        The updated_at column is out of sync again in orders, fix it.
 
-Assistant:  Fixed: the trigger was missing on orders; added it and backfilled 212 rows.
-
-            One thing worth your decision: this is the third column of this kind
-            patched this month. Your book calls this "shifting the burden" (p. 124):
-            each quick fix relieves the symptom and makes the root fix feel less
-            urgent. Want one migration that covers every table instead of a fourth patch?
+Assistant:  Fixed: the trigger was missing on orders; added it and backfilled
+            212 rows, tests pass. This is the third patch of this kind this
+            month - a shifting of the burden: each quick fix removes the symptom
+            and makes the root fix feel less urgent. Do you want one migration
+            for all tables instead of a fourth patch?
 ```
+
+No lecture, no separate "idea of the day", nothing extra to read. The first time a term appears it comes with a few words of explanation; after that the assistant uses it the way a colleague who read the same book would. Ask "tell me more about that" and you get the passage, the page and the author's own example.
+
+It also works for a book you have not read yet: you pick up its vocabulary on your own cases first, and know which chapters are worth opening.
 
 ilm is a small local MCP server plus a set of rules for the assistant. It works with any assistant that speaks MCP: Claude Code, Codex, Cursor, Claude Desktop and others, in a coding agent or in a chat. All of them share one book and one record of your progress.
 
 ## What it does
 
 - Reads one book at a time: PDF, EPUB, FB2, DOCX, TXT, MD, HTML, or a YouTube video with captions.
-- Builds an idea map of the book, portion by portion: each concept, when it applies, where it lives, the author's own example.
-- Speaks up only at decision points, with one idea, in the plan or the summary. It stays silent while code is being written, and never writes the book into your code, commits or files.
-- Tracks every idea as new, met or applied, and asks later whether you got to try it.
+- Builds the book's vocabulary once, right after loading: each concept, a short gloss, when it applies, where it lives, the author's own example.
+- Hands the assistant that vocabulary at the start of every conversation, so speaking the book's language costs no extra searches and no waiting.
+- Keeps the terms in the conversation only. They never go into your code, commits or files.
+- Tracks every term as new, met or applied.
 - Remembers lasting facts about you and your project between conversations.
 - Lets you switch to another book and come back: progress on each book is kept.
 - Works in any language the assistant speaks; the book and the conversation may be in different languages.
@@ -47,6 +49,16 @@ Inside Claude Code (2.1.275 or later):
 
 ```
 /plugin install ilm --marketplace yunusovboxodir-lab/ilm
+```
+
+To update later, in a regular terminal:
+
+```bash
+claude plugin marketplace update ilm
+```
+
+```bash
+claude plugin update ilm@ilm
 ```
 
 ### Any other MCP client
@@ -90,7 +102,11 @@ Web chat apps that cannot start local programs (for example ChatGPT in the brows
 
 ## Use
 
-Tell the assistant: `Load this book: /path/to/book.epub` (or paste a YouTube link). After that, just keep working. Ask "where am I in the book?" at any time.
+Tell the assistant: `Load this book: /path/to/book.epub` (or paste a YouTube link).
+
+The assistant then reads the whole book once to build its vocabulary. This is the one costly step: a 400-page book is roughly 300 thousand tokens and some fifteen minutes. It tells you the size first, and you can say "later" to start with the opening chapters only.
+
+After that, just keep working. Ask "where am I in the book?" or "tell me more about <term>" at any time.
 
 ## Your data
 
@@ -101,7 +117,7 @@ Everything is stored in one file on your computer: `~/.ilm/ilm.db` (set `ILM_DAT
 - Audio books are not supported yet.
 - YouTube videos need existing captions; no audio is downloaded or transcribed, and YouTube rejects some requests.
 - Scanned PDFs without a text layer cannot be read.
-- The assistant cannot write to you first: the "did you try it?" question comes at the start of your next conversation.
+- The vocabulary is sent to the assistant at the start of each conversation: a few thousand tokens for a whole book.
 - Search is keyword-based, without embeddings.
 - Tested with Claude Code on Windows. Other clients are supported through the standard MCP protocol but have not been tested by the author yet.
 
